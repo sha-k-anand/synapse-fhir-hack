@@ -1,0 +1,76 @@
+{
+    "name": "Dataflow1 - observations_incr",
+    "properties": {
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "linkedService": {
+                        "referenceName": "AzureDataLakeStorage1",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "source1observations"
+                }
+            ],
+            "sinks": [
+                {
+                    "linkedService": {
+                        "referenceName": "AzureDataLakeStorage1",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "sink1"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "derivedColumn1"
+                },
+                {
+                    "name": "filter1"
+                },
+                {
+                    "name": "derivedColumn2"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "          category as (coding as (code as string, display as string, system as string)[])[],",
+                "          code as (coding as (code as string, display as string, system as string)[], text as string),",
+                "          component as (code as (coding as (code as string, display as string, system as string)[], text as string), valueQuantity as (code as string, system as string, unit as string, value as short))[],",
+                "          effectiveDateTime as string,",
+                "          encounter as (reference as string),",
+                "          id as string,",
+                "          issued as string,",
+                "          resourceType as string,",
+                "          status as string,",
+                "          subject as (reference as string),",
+                "          valueCodeableConcept as (coding as (code as integer, display as string, system as string)[], text as string),",
+                "          valueQuantity as (code as string, system as string, unit as string, value as double),",
+                "          valueString as string",
+                "     ),",
+                "     useSchema: false,",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     ignoreNoFilesFound: false,",
+                "     format: 'json',",
+                "     fileSystem: 'sourcedata2',",
+                "     documentForm: 'documentPerLine',",
+                "     wildcardPaths:['1daysampleset/*/Observation.ndjson']) ~> source1observations",
+                "source1observations derive(Year = left(issued,4)) ~> derivedColumn1",
+                "derivedColumn1 filter(toInteger(Year) == 2021) ~> filter1",
+                "filter1 derive(Year2 = concat('incr_data/observations/Year=', Year,'/Month=',toString(month(toDate(issued))),'/Day=',toString(dayOfMonth(toDate(issued))))) ~> derivedColumn2",
+                "derivedColumn2 sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     format: 'json',",
+                "     fileSystem: 'bronzesubset',",
+                "     folderPath: 'incr_data/observations',",
+                "     rowFolderUrlColumn:'Year2',",
+                "     umask: 0022,",
+                "     preCommands: [],",
+                "     postCommands: [],",
+                "     skipDuplicateMapInputs: true,",
+                "     skipDuplicateMapOutputs: true) ~> sink1"
+            ]
+        }
+    }
+}

@@ -1,0 +1,80 @@
+{
+    "name": "Dataflow1 - claims",
+    "properties": {
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "linkedService": {
+                        "referenceName": "AzureDataLakeStorage1",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "source1claims"
+                }
+            ],
+            "sinks": [
+                {
+                    "linkedService": {
+                        "referenceName": "AzureDataLakeStorage1",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "sink1"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "derivedColumn1"
+                },
+                {
+                    "name": "filter1"
+                },
+                {
+                    "name": "derivedColumn2"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "          billablePeriod as (end as string, start as string),",
+                "          created as string,",
+                "          diagnosis as (diagnosisReference as (reference as string), sequence as short)[],",
+                "          id as string,",
+                "          insurance as (coverage as (display as string), focal as boolean, sequence as boolean)[],",
+                "          item as (diagnosisSequence as short[], encounter as (reference as string)[], informationSequence as short[], net as (currency as string, value as double), procedureSequence as short[], productOrService as (coding as (code as long, display as string, system as string)[], text as string), sequence as short)[],",
+                "          patient as (display as string, reference as string),",
+                "          prescription as (reference as string),",
+                "          priority as (coding as (code as string, system as string)[]),",
+                "          procedure as (procedureReference as (reference as string), sequence as short)[],",
+                "          provider as (display as string, reference as string),",
+                "          resourceType as string,",
+                "          status as string,",
+                "          supportingInfo as (category as (coding as (code as string, system as string)[]), sequence as short, valueReference as (reference as string))[],",
+                "          total as (currency as string, value as double),",
+                "          type as (coding as (code as string, system as string)[]),",
+                "          use as string",
+                "     ),",
+                "     useSchema: false,",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     ignoreNoFilesFound: false,",
+                "     format: 'json',",
+                "     fileSystem: 'sourcedata2',",
+                "     documentForm: 'documentPerLine',",
+                "     wildcardPaths:['1daysampleset/*/Claim.ndjson']) ~> source1claims",
+                "source1claims derive(Year = left(created,4)) ~> derivedColumn1",
+                "derivedColumn1 filter(toInteger(Year) > 2016) ~> filter1",
+                "filter1 derive(Year2 = concat('historic_data/claims/Year=', Year)) ~> derivedColumn2",
+                "derivedColumn2 sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     format: 'json',",
+                "     fileSystem: 'bronzesubset',",
+                "     folderPath: 'historic_data/claims',",
+                "     rowFolderUrlColumn:'Year2',",
+                "     umask: 0022,",
+                "     preCommands: [],",
+                "     postCommands: [],",
+                "     skipDuplicateMapInputs: true,",
+                "     skipDuplicateMapOutputs: true) ~> sink1"
+            ]
+        }
+    }
+}

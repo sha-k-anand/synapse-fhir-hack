@@ -1,0 +1,39 @@
+ALTER view [dbo].[vw_observations]  as
+SELECT 
+    *
+FROM
+    OPENROWSET(
+        BULK 'https://zzsynapsehackadls2.dfs.core.windows.net/temp01/tempfiles3_1tb_delta/vwdelta_observations/',
+        FORMAT = 'DELTA'
+    ) AS [result]
+
+ALTER view [dbo].[vw_observations_category_coding]  as
+SELECT 
+    *
+FROM
+    OPENROWSET(
+        BULK 'https://zzsynapsehackadls2.dfs.core.windows.net/temp01/tempfiles3_1tb_delta/vwdelta_observations_category_coding/',
+        FORMAT = 'DELTA'
+    ) AS [result]
+GO
+
+ALTER view [dbo].[vw_patients]  as
+SELECT 
+    *
+FROM
+    OPENROWSET(
+        BULK 'https://zzsynapsehackadls2.dfs.core.windows.net/temp01/tempfiles3_1tb_delta/vwdelta_patients/',
+        FORMAT = 'DELTA'
+    ) AS [result]
+GO
+
+
+
+ALTER view [dbo].[vw_patients_extension]  as
+SELECT 
+    *
+FROM
+    OPENROWSET(
+        BULK 'https://zzsynapsehackadls2.dfs.core.windows.net/temp01/tempfiles3_1tb_delta/vwdelta_patients_extension/',
+        FORMAT = 'DELTA'
+    ) AS [result]

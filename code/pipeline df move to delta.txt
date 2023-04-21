@@ -1,0 +1,183 @@
+{
+    "name": "Dataflow1",
+    "properties": {
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "linkedService": {
+                        "referenceName": "AzureDataLakeStorage1",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "source1patients"
+                },
+                {
+                    "linkedService": {
+                        "referenceName": "AzureDataLakeStorage1",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "source2claims"
+                },
+                {
+                    "linkedService": {
+                        "referenceName": "AzureDataLakeStorage1",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "source1observations"
+                }
+            ],
+            "sinks": [
+                {
+                    "linkedService": {
+                        "referenceName": "AzureDataLakeStorage1",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "sink1"
+                },
+                {
+                    "linkedService": {
+                        "referenceName": "AzureDataLakeStorage1",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "sink2"
+                },
+                {
+                    "linkedService": {
+                        "referenceName": "AzureDataLakeStorage1",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "sink3"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "alterRow1"
+                },
+                {
+                    "name": "alterRow2"
+                },
+                {
+                    "name": "alterRow3"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "          id as string,",
+                "          resourcetype as string,",
+                "          birthDate as string,",
+                "          deceasedDateTime as string,",
+                "          gender as string,",
+                "          multipleBirthBoolean as boolean,",
+                "          multipleBirthInteger as long",
+                "     ),",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     ignoreNoFilesFound: false,",
+                "     format: 'parquet',",
+                "     fileSystem: 'temp01',",
+                "     folderPath: 'tempfiles/vwparquet_patients') ~> source1patients",
+                "source(output(",
+                "          id as string,",
+                "          Year1 as string,",
+                "          end as string,",
+                "          start as string,",
+                "          created as string,",
+                "          patient_display as string,",
+                "          patient_reference as string,",
+                "          prescription_reference as string,",
+                "          provider_display as string,",
+                "          provider_reference as string,",
+                "          resourceType as string,",
+                "          status as string,",
+                "          currency as string,",
+                "          value as double",
+                "     ),",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     ignoreNoFilesFound: false,",
+                "     format: 'parquet',",
+                "     fileSystem: 'temp01',",
+                "     folderPath: 'tempfiles/vwparquet_claims') ~> source2claims",
+                "source(output(",
+                "          id as string,",
+                "          Year1 as string,",
+                "          effectiveDateTime as string,",
+                "          encounter_reference as string,",
+                "          issued as string,",
+                "          resourceType as string,",
+                "          status as string,",
+                "          subject_reference as string",
+                "     ),",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     ignoreNoFilesFound: false,",
+                "     format: 'parquet',",
+                "     fileSystem: 'temp01',",
+                "     folderPath: 'tempfiles/vwparquet_observations') ~> source1observations",
+                "source1patients alterRow(insertIf(true()),",
+                "     upsertIf(true())) ~> alterRow1",
+                "source2claims alterRow(insertIf(true()),",
+                "     upsertIf(true())) ~> alterRow2",
+                "source1observations alterRow(insertIf(true()),",
+                "     upsertIf(true())) ~> alterRow3",
+                "alterRow1 sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     format: 'delta',",
+                "     fileSystem: 'silver',",
+                "     folderPath: 'patients',",
+                "     mergeSchema: false,",
+                "     autoCompact: false,",
+                "     optimizedWrite: false,",
+                "     vacuum: 0,",
+                "     deletable:false,",
+                "     insertable:true,",
+                "     updateable:false,",
+                "     upsertable:true,",
+                "     keys:['id'],",
+                "     umask: 0022,",
+                "     preCommands: [],",
+                "     postCommands: [],",
+                "     skipDuplicateMapInputs: true,",
+                "     skipDuplicateMapOutputs: true) ~> sink1",
+                "alterRow2 sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     format: 'delta',",
+                "     fileSystem: 'silver',",
+                "     folderPath: 'claims',",
+                "     mergeSchema: false,",
+                "     autoCompact: false,",
+                "     optimizedWrite: false,",
+                "     vacuum: 0,",
+                "     deletable:false,",
+                "     insertable:true,",
+                "     updateable:true,",
+                "     upsertable:false,",
+                "     keys:['id'],",
+                "     umask: 0022,",
+                "     preCommands: [],",
+                "     postCommands: [],",
+                "     skipDuplicateMapInputs: true,",
+                "     skipDuplicateMapOutputs: true) ~> sink2",
+                "alterRow3 sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     format: 'delta',",
+                "     fileSystem: 'silver',",
+                "     folderPath: 'observations',",
+                "     mergeSchema: false,",
+                "     autoCompact: false,",
+                "     optimizedWrite: false,",
+                "     vacuum: 0,",
+                "     deletable:false,",
+                "     insertable:true,",
+                "     updateable:false,",
+                "     upsertable:true,",
+                "     keys:['id'],",
+                "     umask: 0022,",
+                "     preCommands: [],",
+                "     postCommands: [],",
+                "     skipDuplicateMapInputs: true,",
+                "     skipDuplicateMapOutputs: true) ~> sink3"
+            ]
+        }
+    }
+}

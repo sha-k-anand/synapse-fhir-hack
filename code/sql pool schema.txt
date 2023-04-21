@@ -1,0 +1,105 @@
+CREATE TABLE [dbo].[claims]
+( 
+	[id] [varchar](max)  NULL,
+	[Year1] [varchar](max)  NULL,
+	[billablePeriod_start] [varchar](max)  NULL,
+	[billablePeriod_end] [varchar](max)  NULL,
+	[created] [varchar](max)  NULL,
+	[patient_display] [varchar](max)  NULL,
+	[patient_reference] [varchar](max)  NULL,
+	[prescription_reference] [varchar](max)  NULL,
+	[provider_display] [varchar](max)  NULL,
+	[provider_reference] [varchar](max)  NULL,
+	[resourceType] [varchar](max)  NULL,
+	[status] [varchar](max)  NULL,
+	[total_currency] [varchar](max)  NULL,
+	[total_value] [float]  NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	HEAP
+)
+
+CREATE TABLE [dbo].[observations]
+( 
+	[id] [varchar](max)  NULL,
+	[Year1] [varchar](max)  NULL,
+	[effectiveDateTime] [varchar](max)  NULL,
+	[encounter_reference] [varchar](max)  NULL,
+	[issued] [varchar](max)  NULL,
+	[resourceType] [varchar](max)  NULL,
+	[status] [varchar](max)  NULL,
+	[subject_reference] [varchar](max)  NULL,
+	[valueQuantity_code] [varchar](max)  NULL,
+	[valueQuantity_system] [varchar](max)  NULL,
+	[valueQuantity_unit] [varchar](max)  NULL,
+	[valueQuantity_value] [float]  NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	HEAP
+)
+
+
+CREATE TABLE [dbo].[observations_category_coding]
+( 
+	[id] [varchar](max)  NULL,
+	[code] [varchar](max)  NULL,
+	[display] [varchar](max)  NULL,
+	[system] [varchar](max)  NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	HEAP
+)
+
+
+CREATE TABLE [dbo].[observations_code_coding]
+( 
+	[id] [varchar](max)  NULL,
+	[code] [varchar](max)  NULL,
+	[display] [varchar](max)  NULL,
+	[system] [varchar](max)  NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	HEAP
+)
+
+CREATE TABLE [dbo].[patients]
+( 
+	[id] [varchar](max)  NULL,
+	[resourcetype] [varchar](max)  NULL,
+	[birthDate] [varchar](max)  NULL,
+	[deceasedDateTime] [varchar](max)  NULL,
+	[gender] [varchar](max)  NULL,
+	[multipleBirthBoolean] [bit]  NULL,
+	[multipleBirthInteger] [bigint]  NULL,
+	[maritalStatus_text] [varchar](max)  NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	HEAP
+)
+
+CREATE TABLE [dbo].[patients_extension]
+( 
+	[id] [varchar](max)  NULL,
+	[url] [varchar](max)  NULL,
+	[valueString] [varchar](max)  NULL,
+	[valueDecimal] [float]  NULL,
+	[city] [varchar](max)  NULL,
+	[state] [varchar](max)  NULL,
+	[country] [varchar](max)  NULL
+)
+WITH
+(
+	DISTRIBUTION = ROUND_ROBIN,
+	HEAP
+)
+

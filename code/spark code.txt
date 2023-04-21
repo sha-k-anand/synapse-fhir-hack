@@ -1,0 +1,276 @@
+%%pyspark
+spark.sql("DROP TABLE IF EXISTS patients");
+spark.sql("DROP TABLE IF EXISTS observations");
+spark.sql("DROP TABLE IF EXISTS claims");
+
+spark.sql("DROP VIEW IF EXISTS vwparquet_patients");
+spark.sql("DROP VIEW IF EXISTS vwparquet_patients_extension");
+spark.sql("DROP VIEW IF EXISTS vwparquet_observations");
+spark.sql("DROP VIEW IF EXISTS vwparquet_observations_category_coding");
+spark.sql("DROP VIEW IF EXISTS vwparquet_observations_code_coding");
+spark.sql("DROP VIEW IF EXISTS vwparquet_claims");
+spark.sql("DROP VIEW IF EXISTS vwparquet_claims_insurance");
+
+
+
+%%sql
+CREATE TABLE patients
+(
+address	                array<struct<city:string,country:string,extension:array<struct<extension:array<struct<url:string,valueDecimal:double>>,url:string>>,line:array<string>,postalCode:string,state:string>>,
+birthDate	            string,
+communication	        array<struct<language:struct<coding:array<struct<code:string,display:string,system:string>>,text:string>>>,
+deceasedDateTime	    string,
+extension	            array<struct<url:string,valueAddress:struct<city:string,country:string,state:string>,valueDecimal:double,valueString:string>>,
+gender	                string,
+id	                    string,
+identifier	            array<struct<system:string,type:struct<coding:array<struct<code:string,display:string,system:string>>,text:string>,value:string>>,
+maritalStatus	        struct<coding:array<struct<code:string,display:string,system:string>>,text:string>,
+multipleBirthBoolean	boolean,
+multipleBirthInteger	bigint,
+name	                array<struct<family:string,given:array<string>,prefix:array<string>,suffix:array<string>,use:string>>,
+resourceType	        string,
+telecom	                array<struct<system:string,use:string,value:string>>,
+text	                struct<div:string,status:string>
+)
+    USING json
+    OPTIONS (multiline=false,path 'abfss://sourcedata2@zzsynapsehackadls2.dfs.core.windows.net/30tb/*/Patient.ndjson')
+
+
+
+%%sql
+CREATE TABLE observations
+(
+Year1	                string,
+category	            array<struct<coding:array<struct<code:string,display:string,system:string>>>>,
+code	                struct<coding:array<struct<code:string,display:string,system:string>>,text:string>,
+component	            array<struct<code:struct<coding:array<struct<code:string,display:string,system:string>>,text:string>,valueQuantity:struct<code:string,system:string,unit:string,value:bigint>>>,
+effectiveDateTime	    string,
+encounter	            struct<reference:string>,
+id	                    string,
+issued	                string,
+resourceType	        string,
+status	                string,
+subject	                struct<reference:string>,
+valueCodeableConcept	struct<coding:array<struct<code:bigint,display:string,system:string>>,text:string>,
+valueQuantity	        struct<code:string,system:string,unit:string,value:double>
+)
+USING json
+    OPTIONS (multiline=false,path 'abfss://sourcedata2@zzsynapsehackadls2.dfs.core.windows.net/30tb/*/Observation.ndjson')
+
+
+
+%%sql
+CREATE TABLE claims
+(
+Year1			string,
+billablePeriod	struct<end:string,start:string>,
+created		string,
+diagnosis		array<struct<diagnosisReference:struct<reference:string>,sequence:bigint>>,
+id			string,
+insurance		array<struct<coverage:struct<display:string>,focal:boolean,sequence:boolean>>,
+item        	array<struct<diagnosisSequence:array<bigint>,encounter:array<struct<reference:string>>,informationSequence:array<bigint>,net:struct<currency:string,value:double>,procedureSequence:array<bigint>,productOrService:struct<coding:array<struct<code:bigint,display:string,system:string>>,text:string>,sequence:bigint>>,
+patient		struct<display:string,reference:string>,
+prescription	struct<reference:string>,
+priority		struct<coding:array<struct<code:string,system:string>>>,
+procedure		array<struct<procedureReference:struct<reference:string>,sequence:bigint>>,
+provider		struct<display:string,reference:string>,
+resourceType	string,
+status		string,
+supportingInfo	array<struct<category:struct<coding:array<struct<code:string,system:string>>>,sequence:bigint,valueReference:struct<reference:string>>>,
+total			struct<currency:string,value:double>,
+type			struct<coding:array<struct<code:string,system:string>>>,
+use			string
+)
+USING json
+    OPTIONS (multiline=false,path 'abfss://sourcedata2@zzsynapsehackadls2.dfs.core.windows.net/30tb/*/Claim.ndjson')
+
+
+
+%%sql
+create view vwparquet_patients as 
+select
+     p.id,
+     p.resourcetype,
+     p.birthDate,
+     p.deceasedDateTime,
+     p.gender,
+     p.multipleBirthBoolean,
+     p.multipleBirthInteger,
+     p.maritalStatus.text as  maritalStatus_text
+from
+     patients p 
+
+
+%%sql
+create view vwparquet_patients_extension as 
+SELECT
+    p.id,
+    p_exp.j_fn.url,
+    p_exp.j_fn.valueString,
+    p_exp.j_fn.valueDecimal,
+    p_exp.j_fn.valueAddress.city,
+    p_exp.j_fn.valueAddress.state,
+    p_exp.j_fn.valueAddress.country
+FROM  patients p
+LATERAL VIEW  explode(p.extension) p_exp AS j_fn
+
+
+%%sql
+create view vwparquet_observations as 
+select
+    id	             ,
+    Year1,
+    effectiveDateTime,
+    encounter.reference  as  encounter_reference,
+    issued	         ,
+    split(issued,'-')[0] as year01,
+    split(issued,'-')[1] as month01,
+    resourceType	 ,
+    status	         ,
+    subject.reference	        as subject_reference,
+    valueQuantity.code          as valueQuantity_code,
+    valueQuantity.system        as valueQuantity_system,
+    valueQuantity.unit          as valueQuantity_unit,
+    valueQuantity.value         as valueQuantity_value
+ from observations o
+ WHERE split(issued,'-')[0] >= 2016
+
+
+%%sql
+create view vwparquet_observations_category_coding as 
+SELECT
+    split(o.issued,'-')[0] as year01,
+    split(o.issued,'-')[1] as month01,
+    o.id,
+    o_code.j_fn.code,
+    o_code.j_fn.display,
+    o_code.j_fn.system
+FROM observations o
+    LATERAL VIEW  explode(o.category) o_cat   AS j_fn
+    LATERAL VIEW  explode(o_cat.j_fn.coding)   o_code  AS j_fn
+WHERE split(o.issued,'-')[0] >= 2016
+--WHERE      o.id = '7c9962f1-6681-3714-22bc-bb9d6f63bd7e'
+
+
+%%sql
+create view vwparquet_claims as 
+SELECT
+    c.id,
+    c.Year1,	
+    c.billablePeriod.start as billablePeriod_start,
+    c.billablePeriod.end as billablePeriod_end,
+    c.created		,
+    split(c.created,'-')[0] as year01,
+    split(c.created,'-')[1] as month01,
+    c.patient.display as patient_display,
+    c.patient.reference     as patient_reference,
+    c.prescription.reference as prescription_reference,
+    c.provider.display as  provider_display,
+    c.provider.reference as provider_reference,
+    c.resourceType	,
+    c.status		,
+    c.total.currency as total_currency,
+    c.total.value as total_value
+FROM 
+    claims c
+WHERE split(c.created,'-')[0] >= 2016
+
+
+%%sql
+create view vwparquet_claims_insurance as 
+SELECT
+    split(c.created,'-')[0] as year01,
+    split(c.created,'-')[1] as month01,
+    c.id,
+    c_insu.j_fn.coverage.display as insurance_coverage_display,
+    c_insu.j_fn.focal            as insurance_coverage_focal,
+    c_insu.j_fn.sequence         as insurance_coverage_sequence
+FROM 
+    claims c
+LATERAL VIEW  explode(c.insurance) c_insu   AS j_fn
+WHERE split(c.created,'-')[0] >= 2016
+
+
+
+%%pyspark
+resultsDF=spark.sql("SELECT * FROM vwparquet_patients ")
+resultsDF.write.parquet("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles2/vwparquet_patients/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_patients_extension ")
+resultsDF.write.parquet("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles2/vwparquet_patients_extension/")
+
+
+
+
+%%pyspark
+resultsDF=spark.sql("SELECT * FROM vwparquet_observations ")
+resultsDF.write.partitionBy('year01', 'month01').parquet("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles2/vwparquet_observations/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_observations_category_coding ")
+resultsDF.write.partitionBy('year01', 'month01').parquet("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles2/vwparquet_observations_category_coding/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_observations_code_coding ")
+resultsDF.write.partitionBy('year01', 'month01').parquet("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles2/vwparquet_observations_code_coding/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_claims ")
+resultsDF.write.partitionBy('year01', 'month01').parquet("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles2/vwparquet_claims/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_claims_insurance ")
+resultsDF.write.partitionBy('year01', 'month01').parquet("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles2/vwparquet_claims_insurance/")
+
+
+
+
+
+%%pyspark
+resultsDF=spark.sql("SELECT * FROM vwparquet_claims ")
+resultsDF.write.partitionBy('year01', 'month01').parquet("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles2/vwparquet_claims/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_claims_insurance ")
+resultsDF.write.partitionBy('year01', 'month01').parquet("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles2/vwparquet_claims_insurance/")
+
+
+%%pyspark
+resultsDF=spark.sql("SELECT * FROM vwparquet_patients ")
+resultsDF.write.format("delta").save("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles/vwdelta_patients/")
+
+
+
+
+%%pyspark
+resultsDF=spark.sql("SELECT * FROM vwparquet_patients ")
+resultsDF.write.format("delta").save("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles/vwdelta_patients/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_patients_extension ")
+resultsDF.write.format("delta").save("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles/vwdelta_patients_extension/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_observations ")
+resultsDF.write.format("delta").save("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles/vwdelta_observations/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_observations_category_coding ")
+resultsDF.write.format("delta").save("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles/vwdelta_observations_category_coding/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_observations_code_coding ")
+resultsDF.write.format("delta").save("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles/vwdelta_observations_code_coding/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_claims ")
+resultsDF.write.format("delta").save("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles/vwdelta_claims/")
+
+resultsDF=spark.sql("SELECT * FROM vwparquet_claims_insurance ")
+resultsDF.write.format("delta").save("abfss://temp01@zzsynapsehackadls2.dfs.core.windows.net/tempfiles/vwdelta_claims_insurance/")
+
+
+
+
+%%sql 
+SELECT
+    split(c.created,'-')[0] as year01,
+    split(c.created,'-')[1] as month01,
+    c.id,
+    c_insu.j_fn.coverage.display as insurance_coverage_display,
+    c_insu.j_fn.focal            as insurance_coverage_focal,
+    c_insu.j_fn.sequence         as insurance_coverage_sequence
+FROM 
+    claims c
+LATERAL VIEW  explode(c.insurance) c_insu   AS j_fn limit 100
+

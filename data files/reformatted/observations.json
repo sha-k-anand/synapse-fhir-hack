@@ -1,0 +1,42 @@
+{
+    "category": [
+        {
+            "coding": [
+                {
+                    "code": "vital-signs",
+                    "display": "vital-signs",
+                    "system": "http://terminology.hl7.org/CodeSystem/observation-category"
+                }
+            ]
+        }
+    ],
+    "code": {
+        "coding": [
+            {
+                "code": "8302-2",
+                "display": "Body Height",
+                "system": "http://loinc.org"
+            }
+        ],
+        "text": "Body Height"
+    },
+    "effectiveDateTime": "2021-01-01T03:33:08+00:00",
+    "encounter": {
+        "reference": "Encounter/aba3846a-a889-0484-41f9-e8e3e96332ed"
+    },
+    "id": "7c9962f1-6681-3714-22bc-bb9d6f63bd7e",
+    "issued": "2021-01-01T03:33:08.047+00:00",
+    "resourceType": "Observation",
+    "status": "final",
+    "subject": {
+        "reference": "Patient/814d9550-d737-efb2-cc1b-57346e395e87"
+    },
+    "valueCodeableConcept": {},
+    "valueQuantity": {
+        "code": "cm",
+        "system": "http://unitsofmeasure.org",
+        "unit": "cm",
+        "value": 169.8
+    },
+    "Year": "2021"
+}
